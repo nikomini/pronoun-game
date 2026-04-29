@@ -63,7 +63,7 @@ td { border:1px solid black; padding:10px; }
 <div id="choices"></div>
 </div>
 
-<!-- 音 -->
+<!-- 不正解音 -->
 <audio id="ng" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
 
 <script>
@@ -128,7 +128,7 @@ function check(a,btn){
   combo=0;
   btn.classList.add("wrong");
   ng.currentTime=0;
-  ng.play();
+  ng.play().catch(()=>{});
  }
 
  update();
