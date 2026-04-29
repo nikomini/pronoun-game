@@ -66,25 +66,10 @@ td,th { border:1px solid black; padding:10px; font-size:20px; }
 </div>
 
 <!-- 🔊 音 -->
-<audio id="ng" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/boing.ogg" type="audio/ogg">
-</audio>
+<audio id="ng" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
 
 <script>
-
 let ng = document.getElementById("ng");
-let audioUnlocked = false;
-
-// 🔥 音を解放（超重要）
-document.body.addEventListener("click", () => {
- if (!audioUnlocked) {
-   ng.play().then(() => {
-     ng.pause();
-     ng.currentTime = 0;
-     audioUnlocked = true;
-   }).catch(()=>{});
- }
-});
 
 let score=0,time=0,correct,timer,combo=0;
 let gameActive=false;
@@ -127,17 +112,18 @@ function newQ(){
   html+="</tr>";
  });
  html+="</table>";
- table.innerHTML=html;
+ document.getElementById("table").innerHTML=html;
 
  let opts=[...answers].sort(()=>Math.random()-0.5).slice(0,8);
  if(!opts.includes(correct)) opts[Math.floor(Math.random()*8)] = correct;
 
- choices.innerHTML="";
+ let cdiv=document.getElementById("choices");
+ cdiv.innerHTML="";
  opts.forEach(o=>{
   let b=document.createElement("button");
   b.innerText=o;
   b.onclick=()=>check(o,b);
-  choices.appendChild(b);
+  cdiv.appendChild(b);
  });
 }
 
@@ -151,7 +137,6 @@ function check(a,btn){
   combo=0;
   btn.classList.add("wrong");
 
-  // 🔥 確実再生
   ng.currentTime = 0;
   ng.play().catch(()=>{});
  }
@@ -161,12 +146,12 @@ function check(a,btn){
 }
 
 function updateDisplay(){
- scoreEl.innerText="Score: "+score;
- comboEl.innerText="Combo: "+combo;
+ document.getElementById("score").innerText="Score: "+score;
+ document.getElementById("combo").innerText="Combo: "+combo;
 }
 
 function start(sec){
- finish.innerText="";
+ document.getElementById("finish").innerText="";
  score=0;combo=0;time=sec;
  gameActive=true;
 
@@ -175,25 +160,17 @@ function start(sec){
  clearInterval(timer);
  timer=setInterval(()=>{
   time--;
-  timerEl.innerText="Time: "+time;
+  document.getElementById("timer").innerText="Time: "+time;
 
   if(time<=0){
    clearInterval(timer);
    gameActive=false;
-   finish.innerText="終了！ スコア："+score;
+   document.getElementById("finish").innerText="終了！ スコア："+score;
   }
  },1000);
 
  newQ();
 }
-
-const table=document.getElementById("table");
-const choices=document.getElementById("choices");
-const timerEl=document.getElementById("timer");
-const scoreEl=document.getElementById("score");
-const comboEl=document.getElementById("combo");
-const finish=document.getElementById("finish");
-
 </script>
 
 </body>
