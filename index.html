@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Pronoun Speed Game ULTIMATE</title>
+<title>Pronoun Speed Game</title>
 <style>
 body { font-family: Arial; text-align:center; }
 table { border-collapse: collapse; margin:auto; }
@@ -18,7 +18,7 @@ button { margin:8px; padding:14px 20px; font-size:22px; }
 <h1>Pronoun Speed Game ⚡</h1>
 
 <div>
-名前：<input id="name" style="font-size:20px;">
+名前：<input id="name">
 </div>
 
 <div>
@@ -37,37 +37,23 @@ button { margin:8px; padding:14px 20px; font-size:22px; }
 <h2>🏆 ランキング</h2>
 <div id="ranking"></div>
 
-<audio id="ok" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
-<audio id="ng" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
+<!-- 🔥 Firebase（安定版） -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-<script type="module">
+<script>
 
-// 🔥 Firebase読み込み（修正版）
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
-  limit 
-} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
-// 🔥 Firebase設定
+// Firebase設定
 const firebaseConfig = {
   apiKey: "AIzaSyAD4I9A3vs0a-PabuxGZHqiJa30Qz-T9Zw",
   authDomain: "pronoun-game-c64f4.firebaseapp.com",
-  projectId: "pronoun-game-c64f4",
-  storageBucket: "pronoun-game-c64f4.firebasestorage.app",
-  messagingSenderId: "961450304743",
-  appId: "1:961450304743:web:b170817309009de261ae42"
+  projectId: "pronoun-game-c64f4"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-// ===== ゲーム本体 =====
+// ===== ゲーム =====
 
 const data = [
  ["I","my","me","mine"],
@@ -102,13 +88,7 @@ function pickCell(){
 }
 
 function newQ(){
- let cell;
- if(mode==="review" && mistakes.length>0){
-  cell = mistakes[Math.floor(Math.random()*mistakes.length)];
- } else {
-  cell = pickCell();
- }
-
+ let cell = pickCell();
  const {r,c} = cell;
  correct = data[r][c];
 
@@ -116,7 +96,7 @@ function newQ(){
  data.forEach((row,i)=>{
   html+="<tr>";
   row.forEach((cellVal,j)=>{
-   html += (i==r && j==c) ? "<td class='blank'>???</td>" : `<td>${cellVal??""}</td>`;
+   html += (i==r && j==c) ? "<td class='blank'>???</td>" : `<td>${cellVal||""}</td>`;
   });
   html+="</tr>";
  });
@@ -131,32 +111,20 @@ function newQ(){
  opts.forEach(o=>{
   let b=document.createElement("button");
   b.innerText=o;
-  b.onclick=()=>check(o,{r,c});
+  b.onclick=()=>check(o);
   cdiv.appendChild(b);
  });
 }
 
-function check(a,cell){
+function check(a){
  if(a==correct){
   combo++;
-  let bonus = combo>=3 ? 2 : 1;
-  score += bonus;
-  document.getElementById("ok").play();
+  score++;
  } else {
   combo=0;
-  mistakes.push(cell);
-  document.getElementById("ng").play();
-  flashWrong();
  }
  updateDisplay();
  newQ();
-}
-
-function flashWrong(){
- document.body.classList.add("flashWrong");
- setTimeout(()=>{
-  document.body.classList.remove("flashWrong");
- },200);
 }
 
 function updateDisplay(){
@@ -166,11 +134,8 @@ function updateDisplay(){
 
 function start(sec){
  const player = document.getElementById("name").value || "名無し";
- mode="normal";
- mistakes=[];
  score=0; combo=0; time=sec;
  updateDisplay();
- document.getElementById("timer").innerText="Time: "+time;
 
  clearInterval(timer);
  timer=setInterval(()=>{
@@ -179,7 +144,6 @@ function start(sec){
   if(time<=0){
    clearInterval(timer);
    saveScore(player, score);
-   alert(player + " のスコア: " + score);
    loadRanking();
   }
  },1000);
@@ -187,37 +151,28 @@ function start(sec){
  newQ();
 }
 
-function reviewMode(){
- mode="review";
- newQ();
+// ===== ランキング =====
+
+function saveScore(name, score){
+ db.collection("scores").add({
+   name:name,
+   score:score
+ });
 }
 
-// ===== 共有ランキング =====
-
-async function saveScore(name, score){
-  await addDoc(collection(db, "scores"), {
-    name: name,
-    score: score,
-    createdAt: Date.now()
-  });
-}
-
-async function loadRanking(){
-  const q = query(
-    collection(db, "scores"),
-    orderBy("score", "desc"),
-    limit(10)
-  );
-
-  const snapshot = await getDocs(q);
-
-  let html = "";
-  snapshot.forEach(doc => {
-    const d = doc.data();
-    html += `${d.name} : ${d.score}<br>`;
-  });
-
-  document.getElementById("ranking").innerHTML = html;
+function loadRanking(){
+ db.collection("scores")
+   .orderBy("score","desc")
+   .limit(10)
+   .get()
+   .then(snapshot=>{
+     let html="";
+     snapshot.forEach(doc=>{
+       const d=doc.data();
+       html += d.name + " : " + d.score + "<br>";
+     });
+     document.getElementById("ranking").innerHTML=html;
+   });
 }
 
 loadRanking();
