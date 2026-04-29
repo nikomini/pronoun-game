@@ -7,68 +7,91 @@
 <style>
 body { font-family: Arial; text-align:center; margin:0; }
 
+/* 上部コンパクト化 */
+#topArea {
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  flex-wrap:wrap;
+  font-size:18px;
+  margin:10px;
+}
+
+/* スコア横並び */
+#statusBar {
+  display:flex;
+  justify-content:center;
+  gap:30px;
+  font-size:22px;
+}
+
+/* ゲーム横並び */
 #gameArea {
   display:flex;
   justify-content:center;
   gap:30px;
-  padding:20px;
+  padding:10px;
 }
 
 #choices {
-  width:300px;
+  width:260px;
   display:flex;
   flex-direction:column;
 }
 
+/* ボタン（少し小さく） */
 #choices button {
-  margin:8px;
-  padding:18px;
-  font-size:22px;
-  border:none;
-  border-radius:10px;
-  background:#f0f0f0;
+  margin:6px;
+  padding:14px;
+  font-size:18px;
+}
+
+/* 表 */
+table { border-collapse: collapse; }
+td,th { border:1px solid black; padding:14px; font-size:22px; }
+.blank { background:yellow; }
+
+/* スマホ */
+@media (max-width:800px){
+  #gameArea { flex-direction:column; }
 }
 
 .correct { background:#7CFC00 !important; }
 .wrong { background:#ff6666 !important; }
-
-table { border-collapse: collapse; }
-td,th { border:1px solid black; padding:16px; font-size:24px; }
-.blank { background:yellow; }
-
-@media (max-width:800px){
-  #gameArea { flex-direction:column; }
-}
 
 </style>
 </head>
 
 <body>
 
-<h1>Pronoun Speed Game ⚡</h1>
+<h2>Pronoun Speed Game ⚡</h2>
 
-クラス：<input id="class" placeholder="例:1A"><br><br>
-名前：<input id="name"><br><br>
+<div id="topArea">
+  クラス：<input id="class" size="5">
+  名前：<input id="name" size="6">
+  <button onclick="start(60)">60秒</button>
+  <button onclick="start(30)">30秒</button>
+</div>
 
-<button onclick="start(60)">60秒</button>
-<button onclick="start(30)">30秒</button>
-
-<p id="timer"></p>
-<p id="score"></p>
-<p id="combo"></p>
+<div id="statusBar">
+  <div id="timer">Time: 0</div>
+  <div id="score">Score: 0</div>
+  <div id="combo">Combo: 0</div>
+</div>
 
 <div id="gameArea">
   <div id="table"></div>
   <div id="choices"></div>
 </div>
 
-<h2>🏆 今日のランキング</h2>
+<h3>🏆 今日のランキング</h3>
 <div id="ranking"></div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script>
+
 const firebaseConfig = {
   apiKey: "AIzaSyAD4I9A3vs0a-PabuxGZHqiJa30Qz-T9Zw",
   authDomain: "pronoun-game-c64f4.firebaseapp.com",
@@ -78,20 +101,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// 名前固定
-let playerName = localStorage.getItem("playerName");
-let className = localStorage.getItem("className");
-
-if(playerName){
- document.getElementById("name").value = playerName;
- document.getElementById("name").disabled = true;
-}
-if(className){
- document.getElementById("class").value = className;
- document.getElementById("class").disabled = true;
-}
-
 const today = new Date().toISOString().slice(0,10);
+
+let score=0, time=0, correct, timer;
+let combo=0;
+let gameActive = false; // ←重要（クリック制御）
 
 const data = [
  ["I","my","me","mine"],
@@ -111,9 +125,6 @@ const answers = [
 "they","their","them","theirs"
 ];
 
-let score=0, time=60, correct, timer;
-let combo=0;
-
 function pickCell(){
  let r,c;
  do{
@@ -124,6 +135,8 @@ function pickCell(){
 }
 
 function newQ(){
+ if(!gameActive) return;
+
  let {r,c} = pickCell();
  correct = data[r][c];
 
@@ -152,6 +165,8 @@ function newQ(){
 }
 
 function check(a,btn){
+ if(!gameActive) return; // ←クリック無効
+
  if(a==correct){
   combo++;
   score++;
@@ -160,8 +175,9 @@ function check(a,btn){
   combo=0;
   btn.classList.add("wrong");
  }
+
  updateDisplay();
- setTimeout(newQ,300);
+ setTimeout(newQ,200);
 }
 
 function updateDisplay(){
@@ -170,29 +186,24 @@ function updateDisplay(){
 }
 
 function start(sec){
- let nameInput = document.getElementById("name").value || "名無し";
- let classInput = document.getElementById("class").value || "未設定";
-
- // 初回だけ保存
- if(!playerName){
-   localStorage.setItem("playerName", nameInput);
-   document.getElementById("name").disabled = true;
- }
- if(!className){
-   localStorage.setItem("className", classInput);
-   document.getElementById("class").disabled = true;
- }
+ const name = document.getElementById("name").value || "名無し";
+ const className = document.getElementById("class").value || "未設定";
 
  score=0; combo=0; time=sec;
+ gameActive = true; // ←開始
+
+ updateDisplay();
 
  clearInterval(timer);
  timer=setInterval(()=>{
   time--;
   document.getElementById("timer").innerText="Time: "+time;
+
   if(time<=0){
    clearInterval(timer);
-   saveScore(nameInput, score, classInput);
-   loadRanking(classInput);
+   gameActive = false; // ←終了でクリック禁止
+   saveScore(name, score, className);
+   loadRanking(className);
   }
  },1000);
 
