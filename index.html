@@ -42,8 +42,8 @@ button { margin:8px; padding:14px 20px; font-size:22px; }
 
 <script type="module">
 
-// 🔥 Firebase読み込み
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+// 🔥 Firebase読み込み（修正版）
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { 
   getFirestore, 
   collection, 
@@ -52,9 +52,9 @@ import {
   query, 
   orderBy, 
   limit 
-} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// 🔥 あなたのFirebase設定
+// 🔥 Firebase設定
 const firebaseConfig = {
   apiKey: "AIzaSyAD4I9A3vs0a-PabuxGZHqiJa30Qz-T9Zw",
   authDomain: "pronoun-game-c64f4.firebaseapp.com",
@@ -192,7 +192,7 @@ function reviewMode(){
  newQ();
 }
 
-// ===== 🔥 共有ランキング（Firestore版） =====
+// ===== 共有ランキング =====
 
 async function saveScore(name, score){
   await addDoc(collection(db, "scores"), {
@@ -220,7 +220,6 @@ async function loadRanking(){
   document.getElementById("ranking").innerHTML = html;
 }
 
-// 初回読み込み
 loadRanking();
 
 </script>
