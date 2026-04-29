@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pronoun Speed Game ULTIMATE</title>
+<style>
+body { font-family: Arial; text-align:center; }
+table { border-collapse: collapse; margin:auto; }
+td,th { border:1px solid black; padding:14px 18px; font-size:26px; }
+.blank { background:yellow; }
+button { margin:8px; padding:14px 20px; font-size:22px; }
+#score, #timer, #combo { font-size:26px; margin:10px; }
+.flashWrong { background-color:#ffb3b3; }
+</style>
+</head>
+<body>
+
+<h1>Pronoun Speed Game ⚡</h1>
+
+<div>
+名前：<input id="name" style="font-size:20px;">
+</div>
+
+<div>
+<button onclick="start(60)">60秒</button>
+<button onclick="start(30)">30秒</button>
+<button onclick="reviewMode()">ミス復習</button>
+</div>
+
+<p id="timer"></p>
+<p id="score"></p>
+<p id="combo"></p>
+
+<div id="table"></div>
+<div id="choices"></div>
+
+<h2>🏆 ランキング</h2>
+<div id="ranking"></div>
+
+<audio id="ok" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="ng" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
+
+<script type="module">
+
+// 🔥 Firebase読み込み
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query, 
+  orderBy, 
+  limit 
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+// 🔥 あなたのFirebase設定
+const firebaseConfig = {
+  apiKey: "AIzaSyAD4I9A3vs0a-PabuxGZHqiJa30Qz-T9Zw",
+  authDomain: "pronoun-game-c64f4.firebaseapp.com",
+  projectId: "pronoun-game-c64f4",
+  storageBucket: "pronoun-game-c64f4.firebasestorage.app",
+  messagingSenderId: "961450304743",
+  appId: "1:961450304743:web:b170817309009de261ae42"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ===== ゲーム本体 =====
+
+const data = [
+ ["I","my","me","mine"],
+ ["you","your","you","yours"],
+ ["he","his","him","his"],
+ ["she","her","her","hers"],
+ ["it","its","it",null],
+ ["we","our","us","ours"],
+ ["you","your","you","yours"],
+ ["they","their","them","theirs"]
+];
+
+const answers = [
+"I","my","me","mine","you","your","yours",
+"he","his","him","she","her","hers",
+"it","its","we","our","us","ours",
+"they","their","them","theirs"
+];
+
+let score=0, time=60, correct, timer;
+let combo=0;
+let mistakes=[];
+let mode="normal";
+
+function pickCell(){
+ let r,c;
+ do{
+  r=Math.floor(Math.random()*data.length);
+  c=Math.floor(Math.random()*4);
+ }while(data[r][c]==null);
+ return {r,c};
+}
+
+function newQ(){
+ let cell;
+ if(mode==="review" && mistakes.length>0){
+  cell = mistakes[Math.floor(Math.random()*mistakes.length)];
+ } else {
+  cell = pickCell();
+ }
+
+ const {r,c} = cell;
+ correct = data[r][c];
+
+ let html="<table><tr><th>～は</th><th>～の</th><th>～を</th><th>～のもの</th></tr>";
+ data.forEach((row,i)=>{
+  html+="<tr>";
+  row.forEach((cellVal,j)=>{
+   html += (i==r && j==c) ? "<td class='blank'>???</td>" : `<td>${cellVal??""}</td>`;
+  });
+  html+="</tr>";
+ });
+ html+="</table>";
+ document.getElementById("table").innerHTML=html;
+
+ let opts=[...answers].sort(()=>Math.random()-0.5).slice(0,8);
+ if(!opts.includes(correct)) opts[Math.floor(Math.random()*8)] = correct;
+
+ let cdiv=document.getElementById("choices");
+ cdiv.innerHTML="";
+ opts.forEach(o=>{
+  let b=document.createElement("button");
+  b.innerText=o;
+  b.onclick=()=>check(o,{r,c});
+  cdiv.appendChild(b);
+ });
+}
+
+function check(a,cell){
+ if(a==correct){
+  combo++;
+  let bonus = combo>=3 ? 2 : 1;
+  score += bonus;
+  document.getElementById("ok").play();
+ } else {
+  combo=0;
+  mistakes.push(cell);
+  document.getElementById("ng").play();
+  flashWrong();
+ }
+ updateDisplay();
+ newQ();
+}
+
+function flashWrong(){
+ document.body.classList.add("flashWrong");
+ setTimeout(()=>{
+  document.body.classList.remove("flashWrong");
+ },200);
+}
+
+function updateDisplay(){
+ document.getElementById("score").innerText="Score: "+score;
+ document.getElementById("combo").innerText="Combo: "+combo;
+}
+
+function start(sec){
+ const player = document.getElementById("name").value || "名無し";
+ mode="normal";
+ mistakes=[];
+ score=0; combo=0; time=sec;
+ updateDisplay();
+ document.getElementById("timer").innerText="Time: "+time;
+
+ clearInterval(timer);
+ timer=setInterval(()=>{
+  time--;
+  document.getElementById("timer").innerText="Time: "+time;
+  if(time<=0){
+   clearInterval(timer);
+   saveScore(player, score);
+   alert(player + " のスコア: " + score);
+   loadRanking();
+  }
+ },1000);
+
+ newQ();
+}
+
+function reviewMode(){
+ mode="review";
+ newQ();
+}
+
+// ===== 🔥 共有ランキング（Firestore版） =====
+
+async function saveScore(name, score){
+  await addDoc(collection(db, "scores"), {
+    name: name,
+    score: score,
+    createdAt: Date.now()
+  });
+}
+
+async function loadRanking(){
+  const q = query(
+    collection(db, "scores"),
+    orderBy("score", "desc"),
+    limit(10)
+  );
+
+  const snapshot = await getDocs(q);
+
+  let html = "";
+  snapshot.forEach(doc => {
+    const d = doc.data();
+    html += `${d.name} : ${d.score}<br>`;
+  });
+
+  document.getElementById("ranking").innerHTML = html;
+}
+
+// 初回読み込み
+loadRanking();
+
+</script>
+
+</body>
+</html>
