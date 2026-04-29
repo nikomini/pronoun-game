@@ -3,47 +3,72 @@
 <head>
 <meta charset="UTF-8">
 <title>Pronoun Speed Game</title>
+
 <style>
-body { font-family: Arial; text-align:center; }
-table { border-collapse: collapse; margin:auto; }
-td,th { border:1px solid black; padding:14px 18px; font-size:26px; }
+body { font-family: Arial; text-align:center; margin:0; }
+
+#gameArea {
+  display:flex;
+  justify-content:center;
+  gap:30px;
+  padding:20px;
+}
+
+#choices {
+  width:300px;
+  display:flex;
+  flex-direction:column;
+}
+
+#choices button {
+  margin:8px;
+  padding:18px;
+  font-size:22px;
+  border:none;
+  border-radius:10px;
+  background:#f0f0f0;
+}
+
+.correct { background:#7CFC00 !important; }
+.wrong { background:#ff6666 !important; }
+
+table { border-collapse: collapse; }
+td,th { border:1px solid black; padding:16px; font-size:24px; }
 .blank { background:yellow; }
-button { margin:8px; padding:14px 20px; font-size:22px; }
-#score, #timer, #combo { font-size:26px; margin:10px; }
-.flashWrong { background-color:#ffb3b3; }
+
+@media (max-width:800px){
+  #gameArea { flex-direction:column; }
+}
+
 </style>
 </head>
+
 <body>
 
 <h1>Pronoun Speed Game ⚡</h1>
 
-<div>
-名前：<input id="name">
-</div>
+クラス：<input id="class" placeholder="例:1A"><br><br>
+名前：<input id="name"><br><br>
 
-<div>
 <button onclick="start(60)">60秒</button>
 <button onclick="start(30)">30秒</button>
-<button onclick="reviewMode()">ミス復習</button>
-</div>
 
 <p id="timer"></p>
 <p id="score"></p>
 <p id="combo"></p>
 
-<div id="table"></div>
-<div id="choices"></div>
+<div id="gameArea">
+  <div id="table"></div>
+  <div id="choices"></div>
+</div>
 
-<h2>🏆 ランキング</h2>
+<h2>🏆 今日のランキング</h2>
 <div id="ranking"></div>
 
-<!-- 🔥 Firebase（安定版） -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <script>
-
-// Firebase設定
 const firebaseConfig = {
   apiKey: "AIzaSyAD4I9A3vs0a-PabuxGZHqiJa30Qz-T9Zw",
   authDomain: "pronoun-game-c64f4.firebaseapp.com",
@@ -53,7 +78,20 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ===== ゲーム =====
+// 名前固定
+let playerName = localStorage.getItem("playerName");
+let className = localStorage.getItem("className");
+
+if(playerName){
+ document.getElementById("name").value = playerName;
+ document.getElementById("name").disabled = true;
+}
+if(className){
+ document.getElementById("class").value = className;
+ document.getElementById("class").disabled = true;
+}
+
+const today = new Date().toISOString().slice(0,10);
 
 const data = [
  ["I","my","me","mine"],
@@ -75,8 +113,6 @@ const answers = [
 
 let score=0, time=60, correct, timer;
 let combo=0;
-let mistakes=[];
-let mode="normal";
 
 function pickCell(){
  let r,c;
@@ -88,8 +124,7 @@ function pickCell(){
 }
 
 function newQ(){
- let cell = pickCell();
- const {r,c} = cell;
+ let {r,c} = pickCell();
  correct = data[r][c];
 
  let html="<table><tr><th>～は</th><th>～の</th><th>～を</th><th>～のもの</th></tr>";
@@ -111,20 +146,22 @@ function newQ(){
  opts.forEach(o=>{
   let b=document.createElement("button");
   b.innerText=o;
-  b.onclick=()=>check(o);
+  b.onclick=()=>check(o,b);
   cdiv.appendChild(b);
  });
 }
 
-function check(a){
+function check(a,btn){
  if(a==correct){
   combo++;
   score++;
+  btn.classList.add("correct");
  } else {
   combo=0;
+  btn.classList.add("wrong");
  }
  updateDisplay();
- newQ();
+ setTimeout(newQ,300);
 }
 
 function updateDisplay(){
@@ -133,9 +170,20 @@ function updateDisplay(){
 }
 
 function start(sec){
- const player = document.getElementById("name").value || "名無し";
+ let nameInput = document.getElementById("name").value || "名無し";
+ let classInput = document.getElementById("class").value || "未設定";
+
+ // 初回だけ保存
+ if(!playerName){
+   localStorage.setItem("playerName", nameInput);
+   document.getElementById("name").disabled = true;
+ }
+ if(!className){
+   localStorage.setItem("className", classInput);
+   document.getElementById("class").disabled = true;
+ }
+
  score=0; combo=0; time=sec;
- updateDisplay();
 
  clearInterval(timer);
  timer=setInterval(()=>{
@@ -143,39 +191,41 @@ function start(sec){
   document.getElementById("timer").innerText="Time: "+time;
   if(time<=0){
    clearInterval(timer);
-   saveScore(player, score);
-   loadRanking();
+   saveScore(nameInput, score, classInput);
+   loadRanking(classInput);
   }
  },1000);
 
  newQ();
 }
 
-// ===== ランキング =====
-
-function saveScore(name, score){
+function saveScore(name, score, className){
  db.collection("scores").add({
    name:name,
-   score:score
+   score:score,
+   class:className,
+   date:today
  });
 }
 
-function loadRanking(){
+function loadRanking(className){
  db.collection("scores")
+   .where("class","==",className)
+   .where("date","==",today)
    .orderBy("score","desc")
    .limit(10)
    .get()
    .then(snapshot=>{
      let html="";
+     let rank=1;
      snapshot.forEach(doc=>{
        const d=doc.data();
-       html += d.name + " : " + d.score + "<br>";
+       html += rank+"位 "+d.name+" : "+d.score+"<br>";
+       rank++;
      });
      document.getElementById("ranking").innerHTML=html;
    });
 }
-
-loadRanking();
 
 </script>
 
