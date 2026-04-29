@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Pronoun Game</title>
+<title>Pronoun Speed Game</title>
 
 <style>
 body { font-family: Arial; text-align:center; }
@@ -34,13 +34,12 @@ body { font-family: Arial; text-align:center; }
 }
 
 table { border-collapse: collapse; }
-td { border:1px solid black; padding:10px; }
-
+td,th { border:1px solid black; padding:10px; }
 .blank { background:yellow; }
+
 .correct { background:#7CFC00; }
 .wrong { background:#ff6666; }
 </style>
-
 </head>
 
 <body>
@@ -78,35 +77,58 @@ const data = [
  ["I","my","me","mine"],
  ["you","your","you","yours"],
  ["he","his","him","his"],
- ["she","her","her","hers"]
+ ["she","her","her","hers"],
+ ["it","its","it",null],
+ ["we","our","us","ours"],
+ ["they","their","them","theirs"]
 ];
 
-const answers = ["I","my","me","mine","you","your","yours","he","his","him","she","her","hers"];
+const answers = [
+"I","my","me","mine","you","your","yours",
+"he","his","him","she","her","hers",
+"it","its","we","our","us","ours",
+"they","their","them","theirs"
+];
 
-function pick(){
- let r = Math.floor(Math.random()*data.length);
- let c = Math.floor(Math.random()*4);
+function pickCell(){
+ let r,c;
+ do{
+  r=Math.floor(Math.random()*data.length);
+  c=Math.floor(Math.random()*4);
+ }while(data[r][c]==null);
  return {r,c};
 }
 
 function newQ(){
  if(!gameActive) return;
 
- let {r,c} = pick();
+ let {r,c} = pickCell();
  correct = data[r][c];
 
- let html="<table>";
+ let html="<table><tr><th>～は</th><th>～の</th><th>～を</th><th>～のもの</th></tr>";
  data.forEach((row,i)=>{
   html+="<tr>";
-  row.forEach((v,j)=>{
-   html += (i==r && j==c) ? "<td class='blank'>???</td>" : "<td>"+v+"</td>";
+  row.forEach((cellVal,j)=>{
+   html += (i==r && j==c) ? "<td class='blank'>???</td>" : "<td>"+(cellVal||"")+"</td>";
   });
   html+="</tr>";
  });
  html+="</table>";
- document.getElementById("table").innerHTML = html;
+ document.getElementById("table").innerHTML=html;
 
- let opts = [...answers].sort(()=>Math.random()-0.5).slice(0,6);
+ // ★ 正解を先に入れる
+ let opts = [correct];
+
+ // 残りをランダム追加
+ let pool = answers.filter(a => a !== correct);
+ pool.sort(()=>Math.random()-0.5);
+
+ for(let i=0;i<5;i++){
+   opts.push(pool[i]);
+ }
+
+ // シャッフル
+ opts.sort(()=>Math.random()-0.5);
 
  let cdiv = document.getElementById("choices");
  cdiv.innerHTML="";
