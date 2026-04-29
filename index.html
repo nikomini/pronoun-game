@@ -1,3 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pronoun Speed Game</title>
+
+<style>
+body { font-family: Arial; text-align:center; margin:0; }
+
+#topArea {
+ display:flex; justify-content:center; gap:10px;
+ flex-wrap:wrap; margin:10px;
+}
+
+#statusBar {
+ display:flex; justify-content:center; gap:40px;
+ font-size:22px;
+}
+
+#gameArea {
+ display:flex; justify-content:center; gap:20px;
+}
+
+#choices {
+ width:220px;
+ display:flex; flex-direction:column;
+}
+
+#choices button {
+ margin:5px; padding:10px; font-size:16px;
+}
+
+table { border-collapse: collapse; }
+td,th { border:1px solid black; padding:10px; font-size:20px; }
+.blank { background:yellow; }
+
+.correct { background:#7CFC00 !important; }
+.wrong { background:#ff6666 !important; }
+
+#finish { font-size:28px; color:red; }
+</style>
+</head>
+
+<body>
+
+<h2>Pronoun Speed Game ⚡</h2>
+
+<div id="topArea">
+クラス：<input id="class" size="5">
+名前：<input id="name" size="6">
+<button onclick="start(60)">60秒</button>
+<button onclick="start(30)">30秒</button>
+</div>
+
+<div id="statusBar">
+<div id="timer">Time: 0</div>
+<div id="score">Score: 0</div>
+<div id="combo">Combo: 0</div>
+</div>
+
+<div id="finish"></div>
+
+<div id="gameArea">
+<div id="table"></div>
+<div id="choices"></div>
+</div>
+
+<!-- 🔊 音 -->
+<audio id="ng" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/boing.ogg" type="audio/ogg">
+</audio>
+
+<script>
+
+let ng = document.getElementById("ng");
+let audioUnlocked = false;
+
+// 🔥 音を解放（超重要）
+document.body.addEventListener("click", () => {
+ if (!audioUnlocked) {
+   ng.play().then(() => {
+     ng.pause();
+     ng.currentTime = 0;
+     audioUnlocked = true;
+   }).catch(()=>{});
+ }
+});
+
+let score=0,time=0,correct,timer,combo=0;
+let gameActive=false;
+
+const data=[
+["I","my","me","mine"],["you","your","you","yours"],
+["he","his","him","his"],["she","her","her","hers"],
+["it","its","it",null],["we","our","us","ours"],
+["you","your","you","yours"],["they","their","them","theirs"]
+];
+
+const answers=[
+"I","my","me","mine","you","your","yours",
+"he","his","him","she","her","hers",
+"it","its","we","our","us","ours",
+"they","their","them","theirs"
+];
+
+function pickCell(){
+ let r,c;
+ do{
+  r=Math.floor(Math.random()*data.length);
+  c=Math.floor(Math.random()*4);
+ }while(data[r][c]==null);
+ return {r,c};
+}
+
+function newQ(){
+ if(!gameActive) return;
+
+ let {r,c}=pickCell();
+ correct=data[r][c];
+
+ let html="<table><tr><th>～は</th><th>～の</th><th>～を</th><th>～のもの</th></tr>";
+ data.forEach((row,i)=>{
+  html+="<tr>";
+  row.forEach((cellVal,j)=>{
+   html+=(i==r&&j==c)?"<td class='blank'>???</td>":`<td>${cellVal||""}</td>`;
+  });
+  html+="</tr>";
+ });
+ html+="</table>";
+ table.innerHTML=html;
+
+ let opts=[...answers].sort(()=>Math.random()-0.5).slice(0,8);
+ if(!opts.includes(correct)) opts[Math.floor(Math.random()*8)] = correct;
+
+ choices.innerHTML="";
+ opts.forEach(o=>{
+  let b=document.createElement("button");
+  b.innerText=o;
+  b.onclick=()=>check(o,b);
+  choices.appendChild(b);
+ });
+}
+
 function check(a,btn){
  if(!gameActive) return;
 
@@ -8,11 +151,50 @@ function check(a,btn){
   combo=0;
   btn.classList.add("wrong");
 
-  // 🔥 ここが修正ポイント
+  // 🔥 確実再生
   ng.currentTime = 0;
-  ng.play().catch(()=>{}); 
+  ng.play().catch(()=>{});
  }
 
  updateDisplay();
  setTimeout(newQ,200);
 }
+
+function updateDisplay(){
+ scoreEl.innerText="Score: "+score;
+ comboEl.innerText="Combo: "+combo;
+}
+
+function start(sec){
+ finish.innerText="";
+ score=0;combo=0;time=sec;
+ gameActive=true;
+
+ updateDisplay();
+
+ clearInterval(timer);
+ timer=setInterval(()=>{
+  time--;
+  timerEl.innerText="Time: "+time;
+
+  if(time<=0){
+   clearInterval(timer);
+   gameActive=false;
+   finish.innerText="終了！ スコア："+score;
+  }
+ },1000);
+
+ newQ();
+}
+
+const table=document.getElementById("table");
+const choices=document.getElementById("choices");
+const timerEl=document.getElementById("timer");
+const scoreEl=document.getElementById("score");
+const comboEl=document.getElementById("combo");
+const finish=document.getElementById("finish");
+
+</script>
+
+</body>
+</html>
