@@ -62,7 +62,6 @@ td,th { border:1px solid black; padding:10px; }
 <div id="choices"></div>
 </div>
 
-<!-- 不正解音 -->
 <audio id="ng" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
 
 <script>
@@ -72,6 +71,9 @@ const ng = document.getElementById("ng");
 let score=0, combo=0, time=30;
 let timer, correct;
 let gameActive=false;
+
+// 🔥 音解放フラグ
+let unlocked=false;
 
 const data = [
  ["I","my","me","mine"],
@@ -116,18 +118,13 @@ function newQ(){
  html+="</table>";
  document.getElementById("table").innerHTML=html;
 
- // ★ 正解を先に入れる
  let opts = [correct];
-
- // 残りをランダム追加
- let pool = answers.filter(a => a !== correct);
- pool.sort(()=>Math.random()-0.5);
+ let pool = answers.filter(a => a !== correct).sort(()=>Math.random()-0.5);
 
  for(let i=0;i<5;i++){
    opts.push(pool[i]);
  }
 
- // シャッフル
  opts.sort(()=>Math.random()-0.5);
 
  let cdiv = document.getElementById("choices");
@@ -149,6 +146,7 @@ function check(a,btn){
  }else{
   combo=0;
   btn.classList.add("wrong");
+
   ng.currentTime=0;
   ng.play().catch(()=>{});
  }
@@ -165,6 +163,15 @@ function update(){
 function start(){
  score=0; combo=0; time=30;
  gameActive=true;
+
+ // 🔥 音を解放（超重要）
+ if(!unlocked){
+   ng.play().then(()=>{
+     ng.pause();
+     ng.currentTime=0;
+     unlocked=true;
+   }).catch(()=>{});
+ }
 
  update();
 
