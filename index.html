@@ -7,46 +7,31 @@
 <style>
 body { font-family: Arial; text-align:center; margin:0; }
 
-/* プロジェクターモード */
 .projector #gameArea,
-.projector #topArea {
-  display:none;
-}
-.projector #ranking {
-  font-size:40px;
-}
+.projector #topArea { display:none; }
+.projector #ranking { font-size:40px; }
 
 #topArea {
-  display:flex;
-  justify-content:center;
-  gap:10px;
-  flex-wrap:wrap;
-  margin:10px;
+ display:flex; justify-content:center; gap:10px;
+ flex-wrap:wrap; margin:10px;
 }
 
 #statusBar {
-  display:flex;
-  justify-content:center;
-  gap:40px;
-  font-size:22px;
+ display:flex; justify-content:center; gap:40px;
+ font-size:22px;
 }
 
 #gameArea {
-  display:flex;
-  justify-content:center;
-  gap:20px;
+ display:flex; justify-content:center; gap:20px;
 }
 
 #choices {
-  width:220px;
-  display:flex;
-  flex-direction:column;
+ width:220px;
+ display:flex; flex-direction:column;
 }
 
 #choices button {
-  margin:5px;
-  padding:10px;
-  font-size:16px;
+ margin:5px; padding:10px; font-size:16px;
 }
 
 table { border-collapse: collapse; }
@@ -57,7 +42,6 @@ td,th { border:1px solid black; padding:10px; font-size:20px; }
 .wrong { background:#ff6666 !important; }
 
 #finish { font-size:28px; color:red; }
-
 </style>
 </head>
 
@@ -92,7 +76,7 @@ td,th { border:1px solid black; padding:10px; font-size:20px; }
 <h3>🏆 今日のランキング</h3>
 <div id="ranking"></div>
 
-<audio id="ok" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<!-- 不正解音のみ -->
 <audio id="ng" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -172,11 +156,10 @@ function check(a,btn){
  if(a==correct){
   combo++;score++;
   btn.classList.add("correct");
-  ok.play();
  }else{
   combo=0;
   btn.classList.add("wrong");
-  ng.play();
+  ng.play(); // ←ここだけ音
  }
  updateDisplay();
  setTimeout(newQ,200);
@@ -242,7 +225,6 @@ function loadRanking(className){
  });
 }
 
-/* 全体 */
 function loadAll(){
  db.collection("scores")
  .where("date","==",today)
@@ -261,7 +243,6 @@ function loadAll(){
  });
 }
 
-/* リセット */
 function resetToday(){
  if(!confirm("今日のランキングを削除しますか？")) return;
  db.collection("scores").where("date","==",today)
@@ -272,7 +253,6 @@ function resetToday(){
  });
 }
 
-/* CSV */
 function downloadCSV(){
  db.collection("scores").where("date","==",today)
  .get().then(s=>{
@@ -289,7 +269,6 @@ function downloadCSV(){
  });
 }
 
-/* プロジェクター */
 function toggleProjector(){
  document.body.classList.toggle("projector");
 }
@@ -304,7 +283,6 @@ const scoreEl=document.getElementById("score");
 const comboEl=document.getElementById("combo");
 const ranking=document.getElementById("ranking");
 const finish=document.getElementById("finish");
-const ok=document.getElementById("ok");
 const ng=document.getElementById("ng");
 
 </script>
